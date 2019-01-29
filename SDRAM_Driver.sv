@@ -119,20 +119,15 @@ end
 always_comb begin
 	m_StateNext  = p_INIT;
 	m_ResetDelay = 1'b0;
-	m_TargetDelay = 16'd0;
 	m_CommandSet = p_COMMAND_NOP;
 	
 	case(m_StatePresent)
 	p_INIT: begin
-		m_StateNext  = p_INIT_NOP;
 		m_ResetDelay = 1'b1;
 	end
 	
 	//Set NOP Commands until it boots
 	p_INIT_NOP: begin
-		//Wait for 200 us
-		m_TargetDelay = 16'd10000;
-		m_CommandSet  = p_COMMAND_NOP;
 		//If delay is met, move on
 		if(m_DelayMet == 1'b1) begin
 			m_StateNext 	= p_INIT_PRECHARGE;
@@ -145,10 +140,7 @@ always_comb begin
 	end
 	
 	//Send a single precharge command then wait
-	p_INIT_PRECHARGE: begin
-		//Wait for 3 clocks for CAS
-		m_TargetDelay = 16'd3;
-		
+	p_INIT_PRECHARGE: begin		
 		//If delay is met move on
 		if(m_DelayMet == 1'b1) begin
 			m_StateNext		= p_INIT_AUTO_REFRESH_ONE;
@@ -156,7 +148,6 @@ always_comb begin
 		end else begin
 			m_StateNext		= p_INIT_PRECHARGE;
 		end
-		
 		//First clock is precharge
 		if(m_DelayStart == 1'b1)begin
 			m_CommandSet  = p_COMMAND_PRECHARGE_ALL;
@@ -164,13 +155,10 @@ always_comb begin
 		end else begin
 			m_CommandSet  = p_COMMAND_NOP;
 		end
-		
 	end
 	
 	//Send a single Autorefresh command then wait
 	p_INIT_AUTO_REFRESH_ONE: begin
-		//Wait for 9 clocks for CAS
-		m_TargetDelay = 16'd9;
 		
 		//If delay is met move on
 		if(m_DelayMet == 1'b1) begin
@@ -192,8 +180,7 @@ always_comb begin
 	
 		//Send a single Autorefresh command then wait
 	p_INIT_AUTO_REFRESH_TWO: begin
-		//Wait for 9 clocks for CAS
-		m_TargetDelay = 16'd9;
+
 		
 		//If delay is met move on
 		if(m_DelayMet == 1'b1) begin
@@ -214,8 +201,6 @@ always_comb begin
 	end
 	
 	p_INIT_MODE_SET: begin
-		//Wait for 2 clocks based on MRD
-		m_TargetDelay = 16'd1;
 		
 		//If delay is met move on
 		if(m_DelayMet == 1'b1)begin
@@ -242,28 +227,73 @@ always_comb begin
 	default: begin
 		m_StateNext  = p_INIT;
 		m_ResetDelay = 1'b1;
-		m_TargetDelay = 16'd0;
 		m_CommandSet = p_COMMAND_NOP;
 	end
 	endcase
 end		
 
+//For counter delay
+always_comb begin
+	m_TargetDelay = 16'd0;
+	case(m_StatePresent)
+		p_INIT:begin
+			m_TargetDelay = 16'd0;		
+		end		
+		
+		p_INIT_NOP:begin
+			//Wait for 200 us
+			m_TargetDelay = 16'd10000;
+		end
+		
+		p_INIT_PRECHARGE:begin
+			//Wait for 3 clocks for CAS
+			m_TargetDelay = 16'd3;
+		end
+		
+		p_INIT_AUTO_REFRESH_ONE:begin
+			//Wait for 9 clocks for CAS
+			m_TargetDelay = 16'd9;
+		end
+		
+		p_INIT_AUTO_REFRESH_TWO:begin
+			//Wait for 9 clocks for CAS
+			m_TargetDelay = 16'd9;
+		end
+		
+		p_INIT_MODE_SET:begin
+			//Wait for 2 clocks based on MRD
+			m_TargetDelay = 16'd1;
+		end
+		
+		p_IDLE:begin
+			
+		end
+		
+		default:begin
+			m_TargetDelay = 16'd0;
+		end
+	endcase
+end
+
 logic 			m_ResetDelay = 1'b0;
 logic [15:0]	m_DelayCount = 16'b0;
-logic [15:0]   m_TargetDelay= 16'b0;
+logic [15:0]   m_TargetDelay;
 logic 			m_DelayMet;
 logic				m_DelayStart;
+logic				m_CounterRunning;
 
-assign m_DelayMet = m_DelayCount == m_TargetDelay;
-assign m_DelayStart = m_DelayCount == 16'b0;
+assign m_DelayMet 		= m_DelayCount == m_TargetDelay;
+assign m_DelayStart 		= m_DelayCount == 16'b0;
+assign m_CounterRunning = m_DelayCount != m_TargetDelay;
+
 //Counter for delays
 always_ff @ (posedge i_Clock) begin
 	//Reset count if signal is present
 	if(m_ResetDelay == 1'b1)begin
 		m_DelayCount = 16'b0;
 	//Only count if not at max
-	end else if(m_DelayCount != m_TargetDelay) begin
-		m_DelayCount = m_DelayCount + 16'b1;
+	end else begin
+		m_DelayCount = m_DelayCount + m_CounterRunning;
 	end
 end
 

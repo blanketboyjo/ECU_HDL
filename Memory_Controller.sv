@@ -1,3 +1,3 @@
-module Memory_Controller ()
+module Memory_Controller ();
 
 endmodule
