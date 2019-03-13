@@ -1,3 +1,25 @@
+/*
+ *  Injector_System:
+ *    This module contains four injector drivers
+ *
+ *  Inputs:
+ *    i_clk     - Input clock to be divided
+ *    i_enable  - 4 bit signal, enables injector, one per injector
+ *    i_peak    - 4 bit signal, Peak current detection, one per injector
+ *    i_hold    - 4 bit signal, Hold current detection, one per injector
+ *
+ *  Outputs:
+ *    o_drive   - 4 bit signal, output for IGBT control, one per injector
+ *    o_flyback - 4 bit signal, output for flyback control, one per injector
+ *
+ *
+ *  Author: Jordan Jones
+ *
+*/
+
+
+
+
 module Injector_System(
 	o_drive,
 	o_flyback,
